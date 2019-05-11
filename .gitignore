@@ -3,6 +3,8 @@
 # virtualenv
 senv/
 
+# PyCharm
+.idea/
 
 ## Standard python .gitignore
 
