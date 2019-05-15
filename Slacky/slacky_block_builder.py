@@ -24,9 +24,7 @@ class SlackyBlockBuilder:
         if self.link_messages:
             blocks.append(
                 sb.text_block(
-                    '\n'.join([
-                        t_str.substitute(iter=str(i + 1).zfill(3)) for i, t_str in enumerate(self.link_messages)
-                    ]),
+                    self.prepare_link_payload(),
                     'LB'
                 )
             )
@@ -34,14 +32,26 @@ class SlackyBlockBuilder:
         if self.text_messages:
             blocks.append(
                 sb.text_block(
-                    '\n'.join([
-                        t_str.substitute(riter=rm.convert_to_numeral(i + 1)) for i, t_str in enumerate(self.text_messages)
-                    ]),
+                    self.prepare_text_payload(),
                     'TB'
                 )
             )
 
         return blocks
+
+    def prepare_text_payload(self):
+        return quote(
+            '\n'.join([
+                t_str.substitute(riter=rm.convert_to_numeral(i + 1)) for i, t_str in enumerate(self.text_messages)
+            ])
+        )
+
+    def prepare_link_payload(self):
+        return quote(
+            '\n'.join([
+                t_str.substitute(iter=str(i + 1).zfill(3)) for i, t_str in enumerate(self.link_messages)
+            ])
+        )
 
     def message_type_switch(self, messages):
         for message in messages:
@@ -50,10 +60,10 @@ class SlackyBlockBuilder:
             if 'subtype' in message and message['subtype'] in cfg.SUBTYPES:
                 continue
 
-            elif 'bot_id' in message and 'blocks' in message:
+            if 'bot_id' in message and 'blocks' in message:
                 self.intercept_bot_message(message['blocks'])
-            elif 'files' in message and message['files'][0]['filetype'] in ['jpg', 'png']:
-                print('# has files')
+            elif 'files' in message:
+                self.file_manager(message)
             elif re.findall('<http([^<>]*)>', message['text']):
                 self.create_link_message(message)
             else:
@@ -78,7 +88,7 @@ class SlackyBlockBuilder:
         self.text_messages.append(self.format_text_message(message['text']))
 
     def format_text_message(self, text):
-        text = quote(text.replace('\n', ' '))
+        text = text.replace('\n', ' ')
         return Template(f"$riter\t{text}")
 
     def create_link_message(self, message):
@@ -87,12 +97,20 @@ class SlackyBlockBuilder:
         if not text and 'attachments' in message and message['attachments'][0]['fallback']:
             text = message['attachments'][0]['fallback']
         for link in links:
-            self.link_messages.append(self.format_link_message(text, link=quote(link)))
+            self.link_messages.append(self.format_link_message(text, link=link))
 
     def format_link_message(self, text=None, link=None, formatted_message=None):
         if formatted_message:
             return Template(f"*{'$iter'}*\t{formatted_message}")
         return Template(f"*{'$iter'}*\t<{link}|:link:>\t{f'_{text}_' if text else link}")
+
+    def file_manager(self, message):
+        print(message)
+        for file in message['files']:
+            if file['filetype'] in cfg.IMG_FRM:
+                print('is image')
+            else:
+                print('is other file')
 
     def create_photo_message(self, message):
         pass

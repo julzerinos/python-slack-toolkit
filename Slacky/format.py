@@ -8,4 +8,6 @@ if __name__ == '__main__':
     # slacky.delete_slack_generated(sys.argv[1])
     #slacky.delete_bot_messages(sys.argv[1])
 
-    slacky.parse(sys.argv[1])
+    print(slacky.get_messages(sys.argv[1]))
+
+    #slacky.parse(sys.argv[1])
