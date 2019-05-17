@@ -1,11 +1,12 @@
 import re
 from string import Template
 from urllib.parse import quote
-
 import roman_numerals as rm
 
-import slacky_config as cfg
+import config as cfg
 import slacky_blocks as sb
+
+import utilities as ut
 
 
 class SlackyBlockBuilder:
@@ -13,16 +14,18 @@ class SlackyBlockBuilder:
     def __init__(self):
         self.link_messages = []
         self.text_messages = []
+        self.photo_messages = []
 
     def parse(self, messages):
         self.message_type_switch(messages)
         return self.stack_blocks()
 
     def stack_blocks(self):
-        blocks = []
+        parent_blocks = []
+        files = []
 
         if self.link_messages:
-            blocks.append(
+            parent_blocks.append(
                 sb.text_block(
                     self.prepare_link_payload(),
                     'LB'
@@ -30,14 +33,17 @@ class SlackyBlockBuilder:
             )
 
         if self.text_messages:
-            blocks.append(
+            parent_blocks.append(
                 sb.text_block(
                     self.prepare_text_payload(),
                     'TB'
                 )
             )
 
-        return blocks
+        if self.photo_messages:
+            files.extend(self.photo_messages)
+
+        return parent_blocks, files
 
     def prepare_text_payload(self):
         return quote(
@@ -55,6 +61,7 @@ class SlackyBlockBuilder:
 
     def message_type_switch(self, messages):
         for message in messages:
+            print(message)
             if not isinstance(message, dict):
                 continue
             if 'subtype' in message and message['subtype'] in cfg.SUBTYPES:
@@ -62,12 +69,14 @@ class SlackyBlockBuilder:
 
             if 'bot_id' in message and 'blocks' in message:
                 self.intercept_bot_message(message['blocks'])
-            elif 'files' in message:
+                continue
+            if 'files' in message:
                 self.file_manager(message)
-            elif re.findall('<http([^<>]*)>', message['text']):
+                continue
+            if re.findall('<http([^<>]*)>', message['text']):
                 self.create_link_message(message)
-            else:
-                self.create_text_message(message)
+                continue
+            self.create_text_message(message)
 
     def intercept_bot_message(self, blocks):
         for block in blocks:
@@ -95,7 +104,8 @@ class SlackyBlockBuilder:
         links = re.findall(r'<(http[^<>]*?)(?:\||>)', message['text'])
         text = re.sub(r'(<.*>)', '', message['text'])
         if not text and 'attachments' in message and message['attachments'][0]['fallback']:
-            text = message['attachments'][0]['fallback']
+            print(message['attachments'][0]['fallback'])
+            text = ut.safe_format(message['attachments'][0]['fallback'])
         for link in links:
             self.link_messages.append(self.format_link_message(text, link=link))
 
@@ -105,12 +115,20 @@ class SlackyBlockBuilder:
         return Template(f"*{'$iter'}*\t<{link}|:link:>\t{f'_{text}_' if text else link}")
 
     def file_manager(self, message):
-        print(message)
         for file in message['files']:
             if file['filetype'] in cfg.IMG_FRM:
-                print('is image')
+                self.image_manager(file)
             else:
                 print('is other file')
 
-    def create_photo_message(self, message):
-        pass
+    def image_manager(self, image):
+        path = ut.get_file(image)
+        self.photo_messages.append(self.create_photo_message(image, path))
+
+    def create_photo_message(self, image, path):
+        return {
+            'filename': image['title'],
+            'path': path
+        }
+
+

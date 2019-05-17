@@ -1,9 +1,13 @@
 import os
 
+from requests import post
+
 import slack
 
 from slacky_block_builder import SlackyBlockBuilder
-import slacky_config as cfg
+import config as cfg
+
+import utilities as ut
 
 
 class Slacky:
@@ -27,9 +31,12 @@ class Slacky:
         if not messages:
             return
 
+        parent_blocks, files = self.bb.parse(messages)
         timestamp = self.send_placeholder(channel_id=channel_id)
-        blocks = self.bb.parse(messages)
-        self.send_update(timestamp, blocks, channel_id=channel_id)
+        if parent_blocks:
+            self.send_update(timestamp, parent_blocks, channel_id=channel_id)
+        if files:
+            self.send_reply(timestamp, files, channel_id=channel_id)
 
         self.delete_set_messages(messages, channel_id=channel_id)
 
@@ -40,7 +47,7 @@ class Slacky:
             groups:read
         """
         response = self.client.api_call(
-            f'conversations.list?types={cfg.CHANNEL["types"]}&exclude_archived={cfg.CHANNEL["exclude_archived"]}',
+            f'conversations.list?types={cfg.CHANNEL["types"]}&exclude_archived={cfg.CHANNEL["exclude_archived"]}'
         )
         assert response['ok']
         return response['channels']
@@ -75,7 +82,7 @@ class Slacky:
             'text=placeholder'
         )
         assert response['ok']
-        return response['ts']
+        return response['ts'], response['thread_ts']
 
     def send_update(self, timestamp, blocks, channel_name=None, channel_id=None):
         if not channel_id:
@@ -88,6 +95,31 @@ class Slacky:
             f'blocks={blocks}'
         )
         assert response['ok']
+
+    def send_reply(self, timestamp, files, channel_name=None, channel_id=None):
+        if not channel_id:
+            channel_id = self.find_channel_id(channel_name)
+        for file in files:
+            self.upload_file(file, timestamp, channel_id=channel_id)
+
+    def upload_file(self, _file, timestamp, channel_name=None, channel_id=None):
+        if not channel_id:
+            channel_id = self.find_channel_id(channel_name)
+
+        file = {
+            'file': (_file['path'], open(_file['path'], 'rb'))
+        }
+
+        upload_values = {
+            "filename": _file['filename'],
+            "token": self.token,
+            "channels": [channel_id],
+            "thread_ts": timestamp,
+            "as_user": cfg.POST['as_user']
+        }
+
+        ut.upload_file(file, upload_values)
+
 
     def delete_slack_generated(self, channel_name=None, channel_id=None):
         self.delete_nuclear(
