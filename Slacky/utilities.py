@@ -10,17 +10,23 @@ def get_file(file):
     response = r.get(
         url=file['url_private'],
         headers={
-            "Authorization": f"Bearer {os.environ['SLACK_API_TOKEN']}"},
+            "Authorization": f"Bearer {os.environ['SLACK_API_TOKEN']}"
+        },
         allow_redirects=False
     )
 
-    path = f'tmp/photo/{file["timestamp"]}.{file["filetype"]}'
+    path = f'tmp/file/{file["timestamp"]}.{file["filetype"]}'
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     with open(path, 'wb') as i:
         i.write(response.content)
 
     return path
+
+
+def upload_file(url, file=None, upload_values=None, headers=None, body=None):
+    response = r.post(url=url, files=file, params=upload_values, headers=headers, data=body).json()
+    assert response['ok']
 
 
 def safe_format(value):
@@ -30,9 +36,4 @@ def safe_format(value):
     """
 
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
-    return re.sub('[^\w\s-]', '', value.decode().strip())
-
-
-def upload_file(file, upload_values):
-    response = r.post("https://slack.com/api/files.upload", files=file, params=upload_values).json()
-    assert response['ok']
+    return re.sub(r'[^\w\s-]', '', value.decode().strip())

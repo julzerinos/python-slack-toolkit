@@ -1,9 +1,8 @@
 import os
 
-from requests import post
-
 import slack
 
+from slacky_emoji_formatter import EmojiControl
 from slacky_block_builder import SlackyBlockBuilder
 import config as cfg
 
@@ -13,12 +12,14 @@ import utilities as ut
 class Slacky:
 
     def __init__(self):
-        # Slacky internal setup
-        self.bb = SlackyBlockBuilder()
 
         # Setup connection with Slack Workspace
         self.token = os.environ['SLACK_API_TOKEN']
         self.client = slack.WebClient(token=self.token)
+
+        # Slacky internal setup
+        self.ec = EmojiControl(self.client)
+        self.bb = SlackyBlockBuilder(self.ec)
 
         # Get channels in workspace
         self.channels = self.get_channels()
@@ -32,6 +33,9 @@ class Slacky:
             return
 
         parent_blocks, files = self.bb.parse(messages)
+
+        self.ec.parse()
+
         timestamp = self.send_placeholder(channel_id=channel_id)
         if parent_blocks:
             self.send_update(timestamp, parent_blocks, channel_id=channel_id)
@@ -39,6 +43,7 @@ class Slacky:
             self.send_reply(timestamp, files, channel_id=channel_id)
 
         self.delete_set_messages(messages, channel_id=channel_id)
+
 
     def get_channels(self):
         """Returns a list of channels in the workspace
@@ -70,7 +75,18 @@ class Slacky:
             f'conversations.history?channel={channel_id}'
         )
         assert response['ok']
-        return response['messages']
+
+        messages = []
+
+        for message in response['messages']:
+            thread_response = self.client.api_call(
+                f'conversations.replies?'
+                f'channel={channel_id}&'
+                f'ts={message["ts"]}'
+            )
+            assert thread_response['ok']
+            messages.extend(thread_response['messages'])
+        return messages
 
     def send_placeholder(self, channel_name=None, channel_id=None):
         if not channel_id:
@@ -118,8 +134,7 @@ class Slacky:
             "as_user": cfg.POST['as_user']
         }
 
-        ut.upload_file(file, upload_values)
-
+        ut.upload_file("https://slack.com/api/files.upload", file, upload_values)
 
     def delete_slack_generated(self, channel_name=None, channel_id=None):
         self.delete_nuclear(
@@ -159,6 +174,8 @@ class Slacky:
             messages = self.get_messages(channel_id=channel_id)
         for message in messages:
             if not restrict or (restrict['type'] in message and message[restrict['type']] in restrict['values']):
+                if 'subtype' in message and message['subtype'] == 'tombstone':
+                    continue
                 response = self.client.api_call(
                     f'chat.delete?channel={channel_id}&ts={message["ts"]}'
                 )

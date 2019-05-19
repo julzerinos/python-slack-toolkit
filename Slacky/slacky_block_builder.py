@@ -1,7 +1,7 @@
 import re
 from string import Template
 from urllib.parse import quote
-import roman_numerals as rm
+import roman as rm
 
 import config as cfg
 import slacky_blocks as sb
@@ -11,10 +11,12 @@ import utilities as ut
 
 class SlackyBlockBuilder:
 
-    def __init__(self):
+    def __init__(self, ec):
+        self.ec = ec
+
         self.link_messages = []
         self.text_messages = []
-        self.photo_messages = []
+        self.file_messages = []
 
     def parse(self, messages):
         self.message_type_switch(messages)
@@ -40,15 +42,21 @@ class SlackyBlockBuilder:
                 )
             )
 
-        if self.photo_messages:
-            files.extend(self.photo_messages)
+        if parent_blocks:
+            parent_blocks.append(
+                sb.date_block()
+            )
+
+        if self.file_messages:
+            self.prepare_file_payload()
+            files.extend(self.file_messages)
 
         return parent_blocks, files
 
     def prepare_text_payload(self):
         return quote(
             '\n'.join([
-                t_str.substitute(riter=rm.convert_to_numeral(i + 1)) for i, t_str in enumerate(self.text_messages)
+                t_str.substitute(riter=f'{rm.toRoman(i + 1).rjust(5)}') for i, t_str in enumerate(self.text_messages)
             ])
         )
 
@@ -59,9 +67,14 @@ class SlackyBlockBuilder:
             ])
         )
 
+    def sort_file_type(self, file):
+        return file['filetype']
+
+    def prepare_file_payload(self):
+        self.file_messages.sort(key=self.sort_file_type)
+
     def message_type_switch(self, messages):
         for message in messages:
-            print(message)
             if not isinstance(message, dict):
                 continue
             if 'subtype' in message and message['subtype'] in cfg.SUBTYPES:
@@ -91,20 +104,19 @@ class SlackyBlockBuilder:
 
     def salvage_bot_text(self, text_message):
         for text in text_message.split('\n'):
-            self.text_messages.append(self.format_text_message(text.split('\t', 1)[1]))
+            self.text_messages.append(self.format_text_message(text.split('\t', 2)[-1]))
 
     def create_text_message(self, message):
         self.text_messages.append(self.format_text_message(message['text']))
 
     def format_text_message(self, text):
         text = text.replace('\n', ' ')
-        return Template(f"$riter\t{text}")
+        return Template(f"`$riter`\t\t{text}")
 
     def create_link_message(self, message):
         links = re.findall(r'<(http[^<>]*?)(?:\||>)', message['text'])
         text = re.sub(r'(<.*>)', '', message['text'])
         if not text and 'attachments' in message and message['attachments'][0]['fallback']:
-            print(message['attachments'][0]['fallback'])
             text = ut.safe_format(message['attachments'][0]['fallback'])
         for link in links:
             self.link_messages.append(self.format_link_message(text, link=link))
@@ -112,23 +124,16 @@ class SlackyBlockBuilder:
     def format_link_message(self, text=None, link=None, formatted_message=None):
         if formatted_message:
             return Template(f"*{'$iter'}*\t{formatted_message}")
-        return Template(f"*{'$iter'}*\t<{link}|:link:>\t{f'_{text}_' if text else link}")
+        emoji = self.ec.get_favicon_from_link(link)
+        return Template(f"*{'$iter'}*\t<{link}|:{emoji}:>\t{f'_{text}_' if text else emoji}")
 
     def file_manager(self, message):
         for file in message['files']:
-            if file['filetype'] in cfg.IMG_FRM:
-                self.image_manager(file)
-            else:
-                print('is other file')
+            self.file_messages.append(self.create_file_message(file, ut.get_file(file)))
 
-    def image_manager(self, image):
-        path = ut.get_file(image)
-        self.photo_messages.append(self.create_photo_message(image, path))
-
-    def create_photo_message(self, image, path):
+    def create_file_message(self, file, path):
         return {
-            'filename': image['title'],
+            'filetype': file['filetype'],
+            'filename': file['title'],
             'path': path
         }
-
-

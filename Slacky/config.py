@@ -15,10 +15,12 @@ SUBTYPES = [
     'channel_topic', 'channel_unarchive', 'ekm_access_denied', 'file_comment', 'file_mention', 'file_share',
     'group_archive', 'group_join', 'group_leave', 'group_name', 'group_purpose', 'group_topic',
     'group_unarchive', 'me_message', 'message_changed', 'message_deleted', 'message_replied', 'pinned_item',
-    'reply_broadcast', 'thread_broadcast', 'unpinned_item'
+    'reply_broadcast', 'thread_broadcast', 'unpinned_item',
+
+    'tombstone'
 ]
 
-# Acceptable image formats
+# Acceptable file formats
 IMG_FRM = [
     'jpg', 'png'
 ]
