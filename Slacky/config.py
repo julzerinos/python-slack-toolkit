@@ -24,3 +24,4 @@ SUBTYPES = [
 IMG_FRM = [
     'jpg', 'png'
 ]
+

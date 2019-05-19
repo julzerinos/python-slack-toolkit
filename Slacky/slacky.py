@@ -24,6 +24,11 @@ class Slacky:
         # Get channels in workspace
         self.channels = self.get_channels()
 
+    def __del__(self):
+
+        # Clean-up
+        ut.remove_directory_and_contents('tmp')
+
     def parse(self, channel_name=None, channel_id=None):
         if not channel_id:
             channel_id = self.find_channel_id(channel_name)

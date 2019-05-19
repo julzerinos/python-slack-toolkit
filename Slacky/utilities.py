@@ -1,9 +1,13 @@
 import re
+import unicodedata
+import string
 
 import requests as r
-import os
 
-import unicodedata
+import os
+import shutil
+
+import config as cfg
 
 
 def get_file(file):
@@ -27,6 +31,7 @@ def get_file(file):
 def upload_file(url, file=None, upload_values=None, headers=None, body=None):
     response = r.post(url=url, files=file, params=upload_values, headers=headers, data=body).json()
     assert response['ok']
+    return response
 
 
 def safe_format(value):
@@ -37,3 +42,9 @@ def safe_format(value):
 
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
     return re.sub(r'[^\w\s-]', '', value.decode().strip())
+
+
+def remove_directory_and_contents(directory):
+    if not os.path.isdir(directory):
+        return
+    shutil.rmtree(directory, ignore_errors=False)

@@ -1,9 +1,26 @@
 from datetime import datetime
 
 
+def category_block():
+    return [
+
+    ]
+
+
 def divider_block():
     return {
         "type": "divider"
+    }
+
+
+def category_title_block(title, block_id):
+    return {
+        'type': 'section',
+        'text': {
+            'type': 'mrkdwn',
+            'text': title,
+        },
+        'block_id': block_id
     }
 
 
