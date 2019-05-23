@@ -2,11 +2,13 @@ import os
 
 import slack
 
-from slacky_emoji_formatter import EmojiControl
+from slacky_emoji_control import EmojiControl
 from slacky_block_builder import SlackyBlockBuilder
 import config as cfg
 
 import utilities as ut
+
+import requests as r
 
 
 class Slacky:
@@ -29,7 +31,39 @@ class Slacky:
         # Clean-up
         ut.remove_directory_and_contents('tmp')
 
-    def parse(self, channel_name=None, channel_id=None):
+    def test(self, channel_name=None, channel_id=None):
+        if not channel_id:
+            channel_id = self.find_channel_id(channel_name)
+
+
+        response_list = self.client.api_call(
+            f'files.list?'
+            f'count=1000&'
+        )
+
+        print(response_list['files'][-4])
+
+
+
+        blocks = [
+            {
+                "type": "image",
+                "image_url": f"{response_list['files'][-4]['url_private']}?pub_secret={response_list['files'][-4]['permalink_public'].split('-')[-1]}",
+                "alt_text": f"{response_list['files'][-4]['id']}"
+            }
+        ]
+
+        print(blocks)
+
+        response = self.client.api_call(
+            f'chat.postMessage?'
+            f'as_user={cfg.POST["as_user"]}&'
+            f'channel={channel_id}&'
+            f'blocks={blocks}'
+        )
+        print(response)
+
+    def format(self, channel_name=None, channel_id=None):
         if not channel_id:
             channel_id = self.find_channel_id(channel_name)
 
@@ -37,18 +71,18 @@ class Slacky:
         if not messages:
             return
 
-        parent_blocks, files = self.bb.parse(messages)
+        message_payloads = self.bb.parse(messages)
 
         self.ec.parse()
 
-        timestamp = self.send_placeholder(channel_id=channel_id)
-        if parent_blocks:
-            self.send_update(timestamp, parent_blocks, channel_id=channel_id)
-        if files:
-            self.send_reply(timestamp, files, channel_id=channel_id)
+        for messages_payload in message_payloads:
+            timestamp = self.send_placeholder(channel_id=channel_id)
+            if messages_payload['parent_blocks']:
+                self.send_update(timestamp, messages_payload['parent_blocks'], channel_id=channel_id)
+            if messages_payload['files']:
+                self.send_reply(timestamp, messages_payload['files'], channel_id=channel_id)
 
         self.delete_set_messages(messages, channel_id=channel_id)
-
 
     def get_channels(self):
         """Returns a list of channels in the workspace
@@ -93,7 +127,7 @@ class Slacky:
             messages.extend(thread_response['messages'])
         return messages
 
-    def send_placeholder(self, channel_name=None, channel_id=None):
+    def send_message(self, channel_name=None, channel_id=None):
         if not channel_id:
             channel_id = self.find_channel_id(channel_name)
         response = self.client.api_call(
@@ -105,23 +139,25 @@ class Slacky:
         assert response['ok']
         return response['ts'], response['thread_ts']
 
-    def send_update(self, timestamp, blocks, channel_name=None, channel_id=None):
-        if not channel_id:
-            channel_id = self.find_channel_id(channel_name)
-        response = self.client.api_call(
-            f'chat.update?'
-            f'as_user={cfg.POST["as_user"]}&'
-            f'channel={channel_id}&'
-            f'ts={timestamp}&'
-            f'blocks={blocks}'
-        )
-        assert response['ok']
+    # def send_update(self, timestamp, blocks=None, text=None, channel_name=None, channel_id=None):
+    #     if not channel_id:
+    #         channel_id = self.find_channel_id(channel_name)
+    #     data_type = 'blocks' if blocks else 'text'
+    #     data = blocks if blocks else text
+    #     response = self.client.api_call(
+    #         f'chat.update?'
+    #         f'as_user={cfg.POST["as_user"]}&'
+    #         f'channel={channel_id}&'
+    #         f'ts={timestamp}&'
+    #         f'{data_type}={data}'
+    #     )
+    #     assert response['ok']
 
-    def send_reply(self, timestamp, files, channel_name=None, channel_id=None):
-        if not channel_id:
-            channel_id = self.find_channel_id(channel_name)
-        for file in files:
-            self.upload_file(file, timestamp, channel_id=channel_id)
+    # def send_reply(self, timestamp, files, channel_name=None, channel_id=None):
+    #     if not channel_id:
+    #         channel_id = self.find_channel_id(channel_name)
+    #     for file in files:
+    #         self.upload_file(file, timestamp, channel_id=channel_id)
 
     def upload_file(self, _file, timestamp, channel_name=None, channel_id=None):
         if not channel_id:
@@ -132,14 +168,20 @@ class Slacky:
         }
 
         upload_values = {
+            "initial_comment": f'[{_file["category"]}] {_file["text"]}',
             "filename": _file['filename'],
             "token": self.token,
-            "channels": [channel_id],
-            "thread_ts": timestamp,
-            "as_user": cfg.POST['as_user']
         }
 
-        ut.upload_file("https://slack.com/api/files.upload", file, upload_values)
+        response_upload = ut.upload_file("https://slack.com/api/files.upload", file, upload_values)
+
+        response = self.client.api_call(
+            f'files.sharedPublicURL?'
+            f'file={response_upload["file"]["id"]}'
+        )
+        assert response['ok']
+
+        return f"{response['file']['url_private']}?pub_secret={response['file']['permalink_public'].split('-')[-1]}",
 
     def delete_slack_generated(self, channel_name=None, channel_id=None):
         self.delete_nuclear(
@@ -181,7 +223,29 @@ class Slacky:
             if not restrict or (restrict['type'] in message and message[restrict['type']] in restrict['values']):
                 if 'subtype' in message and message['subtype'] == 'tombstone':
                     continue
-                response = self.client.api_call(
-                    f'chat.delete?channel={channel_id}&ts={message["ts"]}'
-                )
-                assert response['ok']
+                if 'files' in message:
+                    for file in message['files']:
+                        response_delete = self.client.api_call(
+                            f'files.delete?'
+                            f'file={file["id"]}'
+                        )
+                        assert response_delete['ok']
+                else:
+                    response = self.client.api_call(
+                        f'chat.delete?channel={channel_id}&ts={message["ts"]}'
+                    )
+                    assert response['ok']
+
+    def remove_unused_files(self):
+        response_list = self.client.api_call(
+            f'files.list?'
+            f'count=1000&'
+        )
+        assert response_list['ok']
+
+        for file in [f for f in response_list['files'] if not f['channels'] and not f['groups'] and not f['ims']]:
+            response_delete = self.client.api_call(
+                f'files.delete?'
+                f'file={file["id"]}'
+            )
+            assert response_delete['ok']

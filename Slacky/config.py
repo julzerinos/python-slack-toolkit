@@ -6,7 +6,7 @@ CHANNEL = dict(
 
 # Settings for postMessage
 POST = dict(
-    as_user='false'
+    as_user='true'
 )
 
 # Slack channel information message subtypes
@@ -20,8 +20,8 @@ SUBTYPES = [
     'tombstone'
 ]
 
-# Acceptable file formats
-IMG_FRM = [
-    'jpg', 'png'
-]
+MSG_SEP = {
+    'lk': '\n'
+}
 
+CHT_CHR = '	​'
