@@ -3,7 +3,7 @@ import os
 import slack
 
 from slacky_emoji_control import EmojiControl
-from slacky_block_master import SlackyBlockBuilder
+from slacky_master_controllers import SlackyMessageMaster, SlackyBlockMaster
 import config as cfg
 
 import utilities as ut
@@ -21,7 +21,8 @@ class Slacky:
 
         # Slacky internal setup
         self.ec = EmojiControl(self.client)
-        self.bb = SlackyBlockBuilder(self.ec)
+        self.mm = SlackyMessageMaster(self.ec)
+        self.bm = SlackyBlockMaster()
 
         # Get channels in workspace
         self.channels = self.get_channels()
@@ -34,29 +35,38 @@ class Slacky:
         if not channel_id:
             channel_id = self.find_channel_id(channel_name)
 
-        messages = self.get_messages(channel_id=channel_id)
+        messages = self.get_messages(channel_id=channel_id, skip_non_user=True)
         if not messages:
             return
 
-        message_payloads = self.bb.parse(messages)
+        sorted_messages = dict()
+        for msg in self.mm.parse(messages):
+            for category in msg.msg_catg:
+                if category not in sorted_messages:
+                    sorted_messages[category] = []
+                sorted_messages[category].append(msg)
+
+        for catg, msgs in sorted_messages.items():
+            sorted_messages[catg] = self.bm.parse(catg, msgs)
 
         self.ec.parse()
 
-        for messages_payload in message_payloads:
-            for i, file in enumerate(messages_payload['files']):
-                file['block']['image_url'] = self.make_file_public(file['file_id'])
-                file['block']['alt_text'] = file['file_id']
-                file['block']['block_id'] = f'file{i}.{file["category"]}'
-                file['block']['title'] = {
-                    'type': 'plain_text',
-                    'text': 'slack lmao'
-                }
+        # for messages_payload in message_payloads:
+        #     for i, file in enumerate(messages_payload['files']):
+        #         file['block']['image_url'] = self.make_file_public(file['file_id'])
+        #         file['block']['alt_text'] = file['file_id']
+        #         file['block']['block_id'] = f'file{i}.{file["category"]}'
+        #         file['block']['title'] = {
+        #             'type': 'plain_text',
+        #             'text': 'slack lmao'
+        #         }
+        #
+        #         messages_payload['parent_blocks'].append(
+        #             file['block']
+        #         )
 
-                messages_payload['parent_blocks'].append(
-                    file['block']
-                )
-
-            self.send_message(messages_payload['parent_blocks'], channel_id=channel_id)
+        for catg in sorted_messages:
+            self.send_message(sorted_messages[catg]['parent_blocks'], channel_id=channel_id)
 
         self.delete_set_messages(messages, channel_id=channel_id)
 
@@ -79,7 +89,7 @@ class Slacky:
                 return channel['id']
         raise NameError(f"{self.find_channel_id.__name__}: Channel with given name not found")
 
-    def get_messages(self, channel_name=None, channel_id=None):
+    def get_messages(self, channel_name=None, channel_id=None, skip_non_user=False):
         """Returns a list of messages in the given channel
         Required Slack API Scopes:
             channels:history
@@ -94,6 +104,9 @@ class Slacky:
         messages = []
 
         for message in response['messages']:
+            if skip_non_user and 'subtype' in message and message['subtype'] in cfg.SUBTYPES:
+                continue
+
             thread_response = self.client.api_call(
                 f'conversations.replies?'
                 f'channel={channel_id}&'

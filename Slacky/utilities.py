@@ -9,6 +9,15 @@ import shutil
 
 import config as cfg
 
+from dataclasses import dataclass
+
+
+@dataclass
+class MessageStruct:
+    msg_type: str
+    msg_cont: object
+    msg_catg: list
+
 
 def get_file(file):
     response = r.get(
