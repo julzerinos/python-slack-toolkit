@@ -25,7 +25,7 @@ def category_title_block(title, block_id):
     }
 
 
-def text_block(payload, block_id):
+def text_block(payload='', block_id=''):
     return {
         'type': 'section',
         'text': {
@@ -43,6 +43,14 @@ def fields_block(payload, block_id):
             'block_id': block_id
         }
 
+
+def photo_block(url='', fid='', block_id=''):
+    return {
+            "type": "image",
+            "image_url": url,
+            "alt_text": fid,
+            "block_id": block_id
+        }
 
 
 def date_block():

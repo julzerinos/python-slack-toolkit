@@ -6,6 +6,8 @@ import numeral as num
 import config as cfg
 import slacky_blocks as sb
 
+from slacky_controllers import FileControl, TextControl
+
 import utilities as ut
 
 
@@ -27,6 +29,9 @@ class SlackyBlockBuilder:
             }
         }
 
+        self.fc = FileControl()
+        self.tc = TextControl(ec)
+
     def create_category(self, categories):
         for category in categories:
             if category not in self.categories:
@@ -38,11 +43,10 @@ class SlackyBlockBuilder:
                 }
 
     def is_category_empty(self, category):
-        if not self.categories[category]['link_messages'] \
-                and not self.categories[category]['text_messages'] \
-                and not self.categories[category]['file_messages'] \
-                and not self.categories[category]['prefor_messages']:
-            return True
+        for elem in category:
+            if elem:
+                return False
+        return True
 
     def parse(self, messages):
         self.message_type_switch(messages)
@@ -58,6 +62,10 @@ class SlackyBlockBuilder:
     def category_stack_blocks(self, category):
         parent_blocks = []
         files = []
+
+        parent_blocks.append(
+            sb.divider_block()
+        )
 
         parent_blocks.append(
             sb.category_title_block(category, f'title.{category}')
@@ -131,6 +139,7 @@ class SlackyBlockBuilder:
                 continue
             if 'subtype' in message and message['subtype'] in cfg.SUBTYPES:
                 continue
+            print(message)
 
             if 'bot_id' in message and 'blocks' in message:
                 self.intercept_bot_message(message['blocks'])
@@ -146,15 +155,10 @@ class SlackyBlockBuilder:
                 message_categories = ['General']
 
             if 'files' in message:
-                self.file_manager(message, message_categories)
+                self.fc.messages.append({'message': message, 'categories': message_categories})
                 continue
-            if re.findall(r'(`{3}[\s\S]*`{3})', message['text']):
-                self.create_prefor_message(message, message_categories)
-                continue
-            if re.findall(r'<http([^<>]*)>', message['text']):
-                self.create_link_message(message, message_categories)
-                continue
-            self.create_text_message(message['text'], message_categories)
+            else:
+                self.tc.messages.append({'message': message, 'categories': message_categories})
 
     def intercept_bot_message(self, blocks):
         for block in blocks:
@@ -166,7 +170,6 @@ class SlackyBlockBuilder:
                 self.salvage_bot_text(block['fields'], block_id_values[-1])
             if 'prefor' in block_id_values[0]:
                 self.salvage_bot_prefor(block['text']['text'], block_id_values[-1])
-
 
     def salvage_bot_link(self, link_message, category):
         for link in link_message.split(cfg.MSG_SEP['lk']):
@@ -180,50 +183,6 @@ class SlackyBlockBuilder:
     def salvage_bot_prefor(self, text, category):
         self.categories[category]['prefor_messages'].append(self.format_prefor_message(text.split('\n\n', 1)[-1]))
 
-    def create_text_message(self, message, categories):
-        if message == '':
-            return
-        for category in categories:
-            self.categories[category]['text_messages'].append(self.format_text_message(message))
 
-    def format_text_message(self, text):
-        return Template(f'{cfg.CHT_CHR}​\n`$iter`\n\n{text}')
 
-    def create_link_message(self, message, categories):
-        for category in categories:
-            links = re.findall(r'<(http[^<>]*?)(?:\||>)', message['text'])
-            text = re.sub(r'(<.*>)', '', message['text'])
-            if (not text or text.isspace()) and 'attachments' in message and message['attachments'][0]['fallback']:
-                text = ut.safe_format(message['attachments'][0]['fallback'])
-            for link in links:
-                self.categories[category]['link_messages'].append(self.format_link_message(text, link=link))
 
-    def format_link_message(self, text=None, link=None, formatted_message=None):
-        if formatted_message:
-            return Template(f"{'$iter'}\t{formatted_message}")
-        emoji = self.ec.get_favicon_from_link(link)
-        return Template(f"{'$iter'}\t<{link}|:{emoji}:>\t{f'_{text}_' if text else emoji}")
-
-    def create_prefor_message(self, message, categories):
-        for catgory in categories:
-            self.categories[catgory]['prefor_messages'].append(self.format_prefor_message(message['text']))
-
-    def format_prefor_message(self, text):
-        return Template(f'*$iter)*\n\n{text}')
-
-    def file_manager(self, message, categories):
-        text = message['text']
-        for category in categories:
-            for file in message['files']:
-                self.categories[category]['file_messages'].append(
-                    self.create_file_message(file, text, ut.get_file(file), category)
-                )
-
-    def create_file_message(self, file, text, path, category):
-        return {
-            'text': text,
-            'filetype': file['filetype'],
-            'filename': file['name'],
-            'path': path,
-            'category': category
-        }

@@ -28,10 +28,23 @@ def get_file(file):
     return path
 
 
-def upload_file(url, file=None, upload_values=None, headers=None, body=None):
-    response = r.post(url=url, files=file, params=upload_values, headers=headers, data=body).json()
+def post(url, file=None, params=None, headers=None, body=None):
+    response = r.post(url=url, files=file, params=params, headers=headers, data=body).json()
     assert response['ok']
     return response
+
+
+def upload_file(_file):
+    file = {
+        'file': (_file['path'], open(_file['path'], 'rb'))
+    }
+
+    params = {
+        "filename": _file['filename'],
+        "token": os.environ['SLACK_API_TOKEN'],
+    }
+
+    return post("https://slack.com/api/files.upload", file, params)
 
 
 def safe_format(value):

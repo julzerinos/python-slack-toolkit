@@ -20,8 +20,16 @@ SUBTYPES = [
     'tombstone'
 ]
 
+IMG_FRM = [
+    'png',
+    'jpg', 'jpeg',
+    'gif'
+]
+
+# Seperator characters for message formatting
 MSG_SEP = {
     'lk': '\n'
 }
 
-CHT_CHR = '	​'
+# Special characters
+CHT_CHR = '	​' # invisible character allows sneaky splitting of strings
