@@ -7,9 +7,6 @@ from slacky_master_controllers import SlackyMessageMaster, SlackyBlockMaster
 import config as cfg
 
 import utilities as ut
-import slacky_blocks as sc
-
-import requests as r
 
 
 class Slacky:
@@ -21,7 +18,7 @@ class Slacky:
 
         # Slacky internal setup
         self.ec = EmojiControl(self.client)
-        self.mm = SlackyMessageMaster(self.ec)
+        self.mm = SlackyMessageMaster()
         self.bm = SlackyBlockMaster()
 
         # Get channels in workspace
@@ -40,7 +37,7 @@ class Slacky:
             return
 
         sorted_messages = dict()
-        for msg in self.mm.parse(messages):
+        for msg in self.mm.parse(messages, self.ec):
             for category in msg.msg_catg:
                 if category not in sorted_messages:
                     sorted_messages[category] = []
@@ -48,27 +45,18 @@ class Slacky:
 
         for catg, msgs in sorted_messages.items():
             sorted_messages[catg] = self.bm.parse(catg, msgs)
+            for pht in sorted_messages[catg]['photos']:
+                pht['image_url'] = self.make_file_public(pht['alt_text'])
+                sorted_messages[catg]['blocks'].append(pht)
 
         self.ec.parse()
 
-        # for messages_payload in message_payloads:
-        #     for i, file in enumerate(messages_payload['files']):
-        #         file['block']['image_url'] = self.make_file_public(file['file_id'])
-        #         file['block']['alt_text'] = file['file_id']
-        #         file['block']['block_id'] = f'file{i}.{file["category"]}'
-        #         file['block']['title'] = {
-        #             'type': 'plain_text',
-        #             'text': 'slack lmao'
-        #         }
-        #
-        #         messages_payload['parent_blocks'].append(
-        #             file['block']
-        #         )
-
         for catg in sorted_messages:
-            self.send_message(sorted_messages[catg]['parent_blocks'], channel_id=channel_id)
+            ts = self.send_message(sorted_messages[catg]['blocks'], channel_id=channel_id)
 
         self.delete_set_messages(messages, channel_id=channel_id)
+
+        self.remove_unused_files()
 
     def get_channels(self):
         """Returns a list of channels in the workspace
@@ -126,6 +114,7 @@ class Slacky:
             f'blocks={blocks}'
         )
         assert response['ok']
+        return response
 
     def make_file_public(self, file_id):
         response = self.client.api_call(
@@ -195,7 +184,11 @@ class Slacky:
         )
         assert response_list['ok']
 
-        for file in [f for f in response_list['files'] if not f['channels'] and not f['groups'] and not f['ims']]:
+        for file in [
+                f for f in response_list['files']
+                if not f['channels'] and not f['groups'] and not f['ims']
+                and not f['permalink_public']
+        ]:
             response_delete = self.client.api_call(
                 f'files.delete?'
                 f'file={file["id"]}'

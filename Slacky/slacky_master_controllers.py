@@ -5,7 +5,7 @@ import numeral as num
 import config as cfg
 import slacky_blocks as sb
 
-from slacky_controllers import FileControl, TextControl, BotMessageControl
+from slacky_controllers import text_parse, file_parse, bot_parse
 
 
 class CategoryException(BaseException):
@@ -14,17 +14,14 @@ class CategoryException(BaseException):
 
 class SlackyMessageMaster:
 
-    def __init__(self, ec):
-        self.bc = BotMessageControl()
-        self.fc = FileControl()
-        self.tc = TextControl(ec)
-
+    def __init__(self):
         self.messages = []
 
-    def parse(self, messages):
+    def parse(self, messages, ec):
         for message in messages:
+            print(message)
             if 'bot_id' in message and 'blocks' in message:
-                self.messages.extend(self.bc.parse(message))
+                self.messages.extend(bot_parse(message))
                 continue
 
             if 'text' in message and re.findall(r'\[([^\[\]]+)\]', message['text']):
@@ -34,9 +31,9 @@ class SlackyMessageMaster:
                 categories = ['General']
 
             self.messages.extend(
-                self.fc.parse(message, categories)
+                file_parse(message, categories)
                 if 'files' in message
-                else self.tc.parse(message, categories)
+                else text_parse(message, categories, ec)
             )
 
         return self.messages
@@ -52,7 +49,7 @@ class SlackyBlockMaster:
             msgs[msg.msg_type].append(msg)
 
         parent_blocks = []
-        files = []
+        photos = []
 
         parent_blocks.append(
             sb.divider_block()
@@ -92,13 +89,37 @@ class SlackyBlockMaster:
                     )
                 )
 
-        # if self.categories[catg]['file_messages']:
-        #     self.prepare_file_payload(catg)
-        #     files.extend(self.categories[catg]['file_messages'])
+        if 'f' in msgs:
+            parent_blocks.append(
+                sb.text_block(
+                    self.prepare_file_payload(msgs['f']),
+                    f'files.{catg}'
+                )
+            )
+
+        if 'p' in msgs:
+            for i, pht in enumerate(msgs['p']):
+                if 'type' in pht.msg_cont:
+                    parent_blocks.append(
+                        sb.photo_block(
+                            pht.msg_cont['alt_text'],
+                            f'phot{i}.{catg}',
+                            re.sub(r'Image \d+', f'Image {i + 1}', pht.msg_cont['title']['text']),
+                            pht.msg_cont['image_url']
+                        )
+                    )
+                else:
+                    photos.append(
+                        sb.photo_block(
+                            pht.msg_cont['file_id'],
+                            f'phot{i}.{catg}',
+                            pht.msg_cont['text'].substitute(iter=(i + 1))
+                        )
+                    )
 
         return {
-            'parent_blocks': parent_blocks,
-            'files': files
+            'blocks': parent_blocks,
+            'photos': photos,
         }
 
     @staticmethod
@@ -126,3 +147,12 @@ class SlackyBlockMaster:
             stc.msg_cont.substitute(iter=num.int2roman(i + 1))
             for i, stc in enumerate(msgs)
         ]
+
+    @staticmethod
+    def prepare_file_payload(msgs):
+        return quote(
+            cfg.MSG_SEP['lk'].join([
+                stc.msg_cont.substitute(iter=str(i + 1).zfill(3))
+                for i, stc in enumerate(msgs)
+            ])
+        )
