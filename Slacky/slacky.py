@@ -28,36 +28,6 @@ class Slacky:
         # Clean-up
         ut.remove_directory_and_contents('tmp')
 
-    def format(self, channel_name=None, channel_id=None):
-        if not channel_id:
-            channel_id = self.find_channel_id(channel_name)
-
-        messages = self.get_messages(channel_id=channel_id, skip_non_user=True)
-        if not messages:
-            return
-
-        sorted_messages = dict()
-        for msg in self.mm.parse(messages, self.ec):
-            for category in msg.msg_catg:
-                if category not in sorted_messages:
-                    sorted_messages[category] = []
-                sorted_messages[category].append(msg)
-
-        for catg, msgs in sorted_messages.items():
-            sorted_messages[catg] = self.bm.parse(catg, msgs)
-            for pht in sorted_messages[catg]['photos']:
-                pht['image_url'] = self.make_file_public(pht['alt_text'])
-                sorted_messages[catg]['blocks'].append(pht)
-
-        self.ec.parse()
-
-        for catg in sorted_messages:
-            ts = self.send_message(sorted_messages[catg]['blocks'], channel_id=channel_id)
-
-        self.delete_set_messages(messages, channel_id=channel_id)
-
-        self.remove_unused_files()
-
     def get_channels(self):
         """Returns a list of channels in the workspace
         Required Slack API Scopes:
