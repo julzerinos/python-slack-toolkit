@@ -26,6 +26,7 @@ class EmojiControl:
         for emoji in self.new_list:
             if emoji['domain'] not in self.current_list:
                 self.send_new_emoji(emoji)
+        ut.remove_directory_and_contents('tmp')
 
     def send_new_emoji(self, emoji):
         headers = {

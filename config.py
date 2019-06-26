@@ -1,3 +1,5 @@
+# SLACKY
+
 # Settings for get_channels
 CHANNEL = dict(
     exclude_archived='true',
@@ -20,16 +22,18 @@ SUBTYPES = [
     'tombstone'
 ]
 
+# CONTROLS
+
 IMG_FRM = [
     'png',
     'jpg', 'jpeg',
     'gif'
 ]
 
-# Seperator characters for message formatting
+# Separator characters for message formatting
 MSG_SEP = {
     'lk': '\n'
 }
 
 # Special characters
-CHT_CHR = '	​' # invisible character allows sneaky splitting of strings
+CHT_CHR = '	​'  # invisible character allows sneaky splitting of strings

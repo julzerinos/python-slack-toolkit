@@ -2,11 +2,7 @@ import os
 
 import slack
 
-from slacky_emoji_control import EmojiControl
-from slacky_master_controllers import SlackyMessageMaster, SlackyBlockMaster
 import config as cfg
-
-import utilities as ut
 
 
 class Slacky:
@@ -16,17 +12,8 @@ class Slacky:
         self.token = os.environ['SLACK_API_TOKEN']
         self.client = slack.WebClient(token=self.token)
 
-        # Slacky internal setup
-        self.ec = EmojiControl(self.client)
-        self.mm = SlackyMessageMaster()
-        self.bm = SlackyBlockMaster()
-
         # Get channels in workspace
         self.channels = self.get_channels()
-
-    def __del__(self):
-        # Clean-up
-        ut.remove_directory_and_contents('tmp')
 
     def get_channels(self):
         """Returns a list of channels in the workspace
@@ -74,14 +61,23 @@ class Slacky:
             messages.extend(thread_response['messages'])
         return messages
 
-    def send_message(self, blocks, channel_name=None, channel_id=None):
+    def send_message(self, text=None, blocks=None, attachments=None, channel_name=None, channel_id=None):
+        """Posts a message in the channel with supplied content
+        Required Slack API Scopes:
+            bot
+        """
         if not channel_id:
             channel_id = self.find_channel_id(channel_name)
+
         response = self.client.api_call(
-            f'chat.postMessage?'
-            f'as_user={cfg.POST["as_user"]}&'
-            f'channel={channel_id}&'
-            f'blocks={blocks}'
+            ''.join(
+                [
+                    f'chat.postMessage?as_user={cfg.POST["as_user"]}&channel={channel_id}&',
+                    f'text={text}' if text else '',
+                    f'blocks={blocks}' if blocks else '',
+                    f'attachments={attachments}' if attachments else ''
+                ]
+            )
         )
         assert response['ok']
         return response
@@ -155,9 +151,9 @@ class Slacky:
         assert response_list['ok']
 
         for file in [
-                f for f in response_list['files']
-                if not f['channels'] and not f['groups'] and not f['ims']
-                and not f['permalink_public']
+            f for f in response_list['files']
+            if not f['channels'] and not f['groups'] and not f['ims']
+               and not f['permalink_public']
         ]:
             response_delete = self.client.api_call(
                 f'files.delete?'

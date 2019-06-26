@@ -3,9 +3,9 @@ from urllib.parse import quote
 import numeral as num
 
 import config as cfg
-import slacky_blocks as sb
+import tools.slacky_blocks as sb
 
-from slacky_controllers import text_parse, file_parse, bot_parse
+from tools.slacky_controllers import text_parse, file_parse, bot_parse
 
 
 class CategoryException(BaseException):
