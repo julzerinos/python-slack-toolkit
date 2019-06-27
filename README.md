@@ -14,16 +14,16 @@ A collection of tools for managing Slack through the versatility and comfort of 
 
 
 
-Slacky is a simple pythonic wrapper for the Slack api methods, which allow the programmer to quickly set-up a project with any functionalities that may be required. 
+Slacky is a simple pythonic wrapper for the Slack API calls, which allow the programmer to quickly set up a project with any functionalities that may be required. 
 
 
-To use Slacky, an app must be created in the Slack developer section and the token must be supplied in one's enviroment variables.
+To use Slacky, an app must be created in the Slack developer section and the token must be supplied in one's environment variables.
 
 
-Depending on the token type used, some functionalities may be used or unavailable. For development purposes, the user token (default) is used.
+Depending on the token type used, some functionalities may be limited or unavailable. For development purposes, the user token (default) is used.
 
 
-For the appropriate methods to function, the app must be given the appropriate Slack API Scopes. It is advised to only apply the ones which are required. These are conveniently listed in the docstrings of the respective Slacky method.
+For the appropriate methods to work, the app must be given the appropriate Slack API Scopes. It is advised to only apply the ones which are required. These are conveniently listed in the docstrings of the respective Slacky method.
 
 
 
@@ -59,3 +59,11 @@ Currently Slacky may be utilized to:
 
 
 A tool for easy formatting of storage/informational channels will soon be available.
+
+
+
+### Future plans
+
+
+
+Slacky shall be made available through pip.
