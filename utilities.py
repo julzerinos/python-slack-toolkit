@@ -7,8 +7,6 @@ import requests as r
 import os
 import shutil
 
-import config as cfg
-
 from dataclasses import dataclass
 
 

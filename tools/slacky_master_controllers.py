@@ -4,12 +4,7 @@ import numeral as num
 
 import config as cfg
 import tools.slacky_blocks as sb
-
 from tools.slacky_controllers import text_parse, file_parse, bot_parse
-
-
-class CategoryException(BaseException):
-    pass
 
 
 class SlackyMessageMaster:
@@ -24,10 +19,11 @@ class SlackyMessageMaster:
                 self.messages.extend(bot_parse(message))
                 continue
 
-            if 'text' in message and re.findall(r'\[([^\[\]]+)\]', message['text']):
-                categories = [cat.capitalize() for cat in re.findall(r'\[([^\[\]]+)\]', message['text'])]
-                message['text'] = re.sub(r'\[([^\[\]]+)\]', '', message['text'])
-            else:
+            categories = []
+            if 'text' in message:
+                categories, message['text'] = self.get_categories(message['text'])
+
+            if not categories:
                 categories = ['General']
 
             self.messages.extend(
@@ -37,6 +33,13 @@ class SlackyMessageMaster:
             )
 
         return self.messages
+
+    @staticmethod
+    def get_categories(text):
+        tmp = re.findall(r'(```[\s\S]*?```)', text)
+        text = re.sub(r'(```[\s\S]*?```)', '', text)
+        categories = [cat.capitalize() for cat in re.findall(r'\[([^\[\]]+)\]', text)]
+        return categories, ' '.join([text] + tmp)
 
 
 class SlackyBlockMaster:

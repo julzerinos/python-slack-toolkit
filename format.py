@@ -2,7 +2,7 @@ import sys
 
 from slacky.slacky import Slacky
 from tools.slacky_master_controllers import SlackyBlockMaster, SlackyMessageMaster
-from tools.slacky_emoji_control import EmojiControl
+from emoji_control.emoji_control import EmojiControl
 
 if __name__ == '__main__':
     slacky = Slacky()
@@ -12,8 +12,9 @@ if __name__ == '__main__':
         exit()
 
     if len(sys.argv) > 2 and sys.argv[2] == 'test':
-        print(slacky.upload_file('README.md', channel_name='testing2', timestamp=slacky.get_messages(channel_name='testing2')[0]['ts']))
-
+        ec = EmojiControl(slacky.client)
+        ec.get_emj_from_link('https://scontent.fwaw3-1.fna.fbcdn.net/v/t34.18173-12/26694531_1964543693873363_371642509_n.jpg?_nc_cat=102&_nc_oc=AQks4MDOqpkyB9Cfh254BEdM6W6Af96Oa9OQhAr2Ai-iIZb_MfhQCImQwHilWeB1H3c&_nc_ht=scontent.fwaw3-1.fna&oh=7208f0f344bf670148f84336091f2bb1&oe=5D16CEF6', 'bóg')
+        ec.parse()
         exit()
 
     channel_id = slacky.find_channel_id(sys.argv[1])

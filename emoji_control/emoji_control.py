@@ -68,7 +68,8 @@ class EmojiControl:
         self.new_list.append(
             {
                 'name': name,
-                'content': response.content}
+                'content': response.content
+            }
         )
 
     def get_emj_from_favicon(self, link):

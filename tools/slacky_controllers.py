@@ -156,7 +156,7 @@ def format_text_message(text):
 def format_link_message(text=None, link=None, formatted_message=None, ec=None):
     if formatted_message:
         return Template(f"{'$iter'}\t{formatted_message}")
-    emoji = ec.get_favicon_from_link(link) if ec else 'link'
+    emoji = ec.get_emj_from_favicon(link) if ec else 'link'
     return Template(f"{'$iter'}\t<{link}|:{emoji}:>\t<{link}|_{text if text else emoji}_>")
 
 
