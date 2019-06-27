@@ -3,6 +3,7 @@ import os
 import slack
 
 import config as cfg
+import utilities as ut
 
 
 class Slacky:
@@ -16,7 +17,9 @@ class Slacky:
         self.channels = self.get_channels()
 
     def get_channels(self):
-        """Returns a list of channels in the workspace
+        """Gets the list of all channels in the workspace.
+
+        Returns a list of channel objects in JSON format.
 
         Required Slack API Scopes:
             channels:read
@@ -29,7 +32,13 @@ class Slacky:
         return response['channels']
 
     def find_channel_id(self, channel_name):
-        """Returns the channel id of the given channel name"""
+        """Finds the channel id of the given channel name.
+
+        Returns a channel ID in str format.
+        """
+        if not channel_name:
+            raise AttributeError(f"{self.find_channel_id.__name__}: Channel ID or Channel Name not given")
+
         for channel in self.channels:
             if channel_name == channel['name']:
                 return channel['id']
@@ -37,7 +46,11 @@ class Slacky:
 
     def get_messages(self, channel_name=None, channel_id=None, skip_non_user=False):
         """Returns a list of messages in the given channel
-        together with the replies to each message
+        together with the replies to each message.
+
+        Returns a list of message objects in JSON format.
+        Replies are added sequentially after their respective
+        parent messages
 
         Required Slack API Scopes:
             channels:history
@@ -68,7 +81,9 @@ class Slacky:
             self, text=None, blocks=None, attachments=None,
             timestamp=None, channel_name=None, channel_id=None):
         """Posts a message in the channel with supplied content.
-        If timestamp is provided, the message is sent as a reply
+        If timestamp is provided, the message is sent as a reply.
+
+        Returns a response object in JSON format.
 
         Required Slack API Scopes:
             bot
@@ -95,6 +110,8 @@ class Slacky:
     def send_update(self, timestamp, text=None, blocks=None, attachments=None, channel_name=None, channel_id=None):
         """Updates a specified message by replacement
 
+        Returns a response object in JSON format.
+
         Required Slack API Scopes:
             bot
             chat:write:user
@@ -116,8 +133,44 @@ class Slacky:
         assert response['ok']
         return response
 
+    def upload_file(
+            self, filepath, filename=None, text='',
+            timestamp=None, channel_name=None, channel_id=None,
+            token=None
+    ):
+        """Uploads a file to a given channel.
+        If timestamp is given, the file is uploaded as a reply.
+
+        Returns response object in JSON format.
+
+        Upload is done externally through a requests POST.
+
+        Token may be given manually to upload file as bot or user.
+        """
+
+        if not channel_id:
+            channel_id = self.find_channel_id(channel_name)
+
+        file = {
+            'file': (filepath, open(filepath, 'rb'))
+        }
+
+        params = {
+            "initial_comment": text,
+            "filename": filename if filename else os.path.basename(filepath),
+            "token": token if token else self.token,
+            "channels": [channel_id]
+        }
+
+        if timestamp:
+            params['thread_ts'] = timestamp
+
+        return ut.post("https://slack.com/api/files.upload", file=file, params=params)
+
     def make_file_public(self, file_id):
         """Makes a file public, which generates a public permalink for the file
+
+        Returns a response object in JSON format.
 
         Required Slack API Scopes:
             files:write:user
@@ -141,6 +194,8 @@ class Slacky:
 
     def make_file_private(self, file_id):
         """Makes a file private, revoking the public_permalink for the file
+
+        Returns a response object in JSON format.
 
         Required Slack API Scopes:
             files:write:user
@@ -234,7 +289,7 @@ class Slacky:
 
     def remove_unused_files(self):
         """Removes all files uploaded to a slack workspace,
-        but not appearing in any channel, chat or group
+        but not present in any channel, group or ims
 
         Required Slack API Scopes:
             files.list

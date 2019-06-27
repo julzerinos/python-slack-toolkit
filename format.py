@@ -12,9 +12,7 @@ if __name__ == '__main__':
         exit()
 
     if len(sys.argv) > 2 and sys.argv[2] == 'test':
-        messages = slacky.get_messages(sys.argv[1])
-
-        slacky.send_update(messages[3]['ts'], text='awdawdadw', channel_name=sys.argv[1])
+        print(slacky.upload_file('README.md', channel_name='testing2', timestamp=slacky.get_messages(channel_name='testing2')[0]['ts']))
 
         exit()
 
