@@ -39,6 +39,7 @@ class SlackyMessageMaster:
         tmp = re.findall(r'(```[\s\S]*?```)', text)
         text = re.sub(r'(```[\s\S]*?```)', '', text)
         categories = [cat.capitalize() for cat in re.findall(r'\[([^\[\]]+)\]', text)]
+        text = re.sub(r'\[([^\[\]]+)\]', '', text)
         return categories, ' '.join([text] + tmp)
 
 
