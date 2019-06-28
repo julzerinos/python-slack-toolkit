@@ -1,8 +1,11 @@
 # Slack Toolkit
 
-## Introduction
-
 A collection of tools for managing Slack through the versatility and comfort of python.
+
+## Table of Contents
+
+1. [Slacky](#slacky) - Simple python slack bot to run calls to the API
+2. [Emoji Control](#emoji-control) - A programmatic solution to adding emoji to a slack workspace 
 
 ## Slacky
 
