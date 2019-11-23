@@ -209,19 +209,12 @@ def salvage(message):
 
 
 
-if __name__ == '__main__':
+def format(channel_id = None, channel_name = None):
     
     slacky = Slacky()
     ec = EmojiControl(slacky.client)
 
-    if len(sys.argv) > 2 and sys.argv[2] == 'nuclear':
-        slacky.delete_messages(sys.argv[1])
-        exit()
-
-    if len(sys.argv) > 2 and sys.argv[2] == 'test':
-        exit()
-
-    channel_id = slacky.find_channel_id(sys.argv[1])
+    channel_id = slacky.find_channel_id(channel_name)
 
     messages = slacky.get_messages(channel_id=channel_id, skip_non_user=True)
     if not messages:
