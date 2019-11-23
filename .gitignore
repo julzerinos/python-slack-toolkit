@@ -1,5 +1,9 @@
 ## Custom
 
+.vscode/
+
+*.pickle
+
 # Project structure
 Slacky/tmp
 
@@ -8,6 +12,9 @@ senv/
 
 # PyCharm
 .idea/
+
+# Google api credentials
+credentials.json
 
 ## Standard python .gitignore
 

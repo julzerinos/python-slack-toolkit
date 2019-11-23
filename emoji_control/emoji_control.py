@@ -59,6 +59,7 @@ class EmojiControl:
         }
 
         response = r.post('https://slack.com/api/emoji.add', headers=headers, files=files, params=params).json()
+
         assert response['ok']
 
     def get_emj_from_link(self, link, name):
@@ -68,8 +69,10 @@ class EmojiControl:
         self.new_list.append(
             {
                 'name': name,
-                'content': response.content}
+                'content': response.content
+                }
         )
+        return name
 
     def get_emj_from_favicon(self, link):
         """Gets the favicon of a website as the emoji.

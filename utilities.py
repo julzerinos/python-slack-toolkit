@@ -21,7 +21,7 @@ class MessageStruct:
 
 def get_file(file):
     response = r.get(
-        url=file['url_private'],
+        url=file['url_private_download'],
         headers={
             "Authorization": f"Bearer {os.environ['SLACK_API_TOKEN']}"
         },
@@ -35,6 +35,11 @@ def get_file(file):
         i.write(response.content)
 
     return path
+
+
+def cleanup():
+    if os.path.isdir('tmp'):
+        shutil.rmtree('tmp')
 
 
 def post(url, file=None, params=None, headers=None, body=None):

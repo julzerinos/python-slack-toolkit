@@ -10,8 +10,7 @@ class Slacky:
 
     def __init__(self):
         # Setup connection with Slack Workspace
-        self.token = os.environ['SLACK_API_TOKEN']
-        self.client = slack.WebClient(token=self.token)
+        self.client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
 
         # Get channels in workspace
         self.channels = self.get_channels()
@@ -158,7 +157,7 @@ class Slacky:
         params = {
             "initial_comment": text,
             "filename": filename if filename else os.path.basename(filepath),
-            "token": token if token else self.token,
+            "token": token if token else os.environ['SLACK_API_TOKEN'],
             "channels": [channel_id]
         }
 
