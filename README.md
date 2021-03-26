@@ -2,6 +2,8 @@
 
 A collection of tools for managing Slack through the versatility and comfort of python.
 
+Projected abandonded in 2018, as I lost to motivation to keep up with Slack API changes.
+
 ## Table of Contents
 
 1. [Slacky](#slacky) - Simple python slack bot to run calls to the API
@@ -49,13 +51,3 @@ Currently three methods to add emoji are implemented:
 * Favicon - Will turn the favicon of a page into an emoji for your Slack workspace.
 
 Due to limitations in the Slack API, the token supplied must be a user token. To find your user token, open any window in your respective Slack workspace and enter the following command into the browser console `window.prompt("your api token is: ", window.boot_data.api_token)`. If emoji manipulation is turned off for normal users, you must be an administrator of the workspace.
-
-## Tools in progress/Roadmap
-
-### Formatting
-
-A tool for easy formatting of storage/informational channels will soon be available.
-
-### Future plans
-
-Slacky shall be made available through pip.
