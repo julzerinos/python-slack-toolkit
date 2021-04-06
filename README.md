@@ -2,7 +2,7 @@
 
 A collection of tools for formatting Slack messages through the versatility and comfort of python.
 
-**Project abandonded in 2018**
+**Project is no longer maintained as of 2018.**
 
 ## Table of Contents
 
