@@ -1,8 +1,8 @@
 # Slack Toolkit
 
-A collection of tools for managing Slack through the versatility and comfort of python.
+A collection of tools for formatting Slack messages through the versatility and comfort of python.
 
-Projected abandonded in 2018, as I lost to motivation to keep up with Slack API changes.
+**Project abandonded in 2018**
 
 ## Table of Contents
 
